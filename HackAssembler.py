@@ -77,7 +77,7 @@ class Parser():
                     symbol_table[var] = 16
 
 
-
+        ####
 
         #else: # else if garbage code then raise error
         #    raise ValueError("garbage code")
