@@ -10,7 +10,7 @@ class SymbolTable(UserDict):
     def __init__(self):
         super().__init__()
 
-        for i in range(15):
+        for i in range(16):
             self['R' + str(i)] = i
 
         self['SCREEN'] = 16384
@@ -59,7 +59,7 @@ class Parser():
         # remove newline
         # remove leading and trailing spaces
         # remove comments
-        self.line = line.rstrip('\n').strip().split('\\')[0].rstrip()
+        self.line = line.rstrip('\n').strip().split('//')[0].rstrip()
 
         if self.line and self.line[0] == "(" and self.line[-1] == ")":
             # label symbol (which is not a line of code)
@@ -75,13 +75,15 @@ class Parser():
             self.line_no += 1
 
         if not self.first_pass:
-            if self.line[0] == "@":
-                # variable symbol or goto (a label symbol)
-                var = self.line[1:]            
-                self.symbol_table.add_variable(var)
-                self.line = "@" + str(self.symbol_table[var])
+            if self.line and self.line[0] == "@":
+                # variable symbol or goto (a label symbol) or integer
+                var = self.line[1:]
+                if not var.isdigit():            
+                    self.symbol_table.add_variable(var)
+                    self.line = "@" + str(self.symbol_table[var])
 
         return self.line
+
 ########################################################################
 
 
@@ -180,10 +182,6 @@ class Code():
         if len(s3) != 1: # there is a ; sign
             jump = s3[1]
   
-        print(f'd={dest}')
-        print(f'c={comp}')
-        print(f'j={jump}')
-
         b = "111" # C-instruction always starts with 111 
         b = b + self.comp_table[comp][0] + self.comp_table[comp][1]
         b = b + self.dest_table[dest]
@@ -194,55 +192,24 @@ class Code():
 ########################################################################
 
 
-c = Code()
-print(c.code("@9"))
+# main #################################################################
+if __name__ == "__main__":
 
-print(c.code("MD=D+1"))
-print(c.code("MD = D+1"))
+    filename_in = sys.argv[1]  
+    filename_out = os.path.splitext(filename_in)[0] + ".hack"   
 
+    p = Parser(SymbolTable())    
+    c = Code()
 
-
-
-symbol_table = SymbolTable()
-p = Parser(symbol_table)
-
-p.parse("   abc   ")
-p.parse("   abc   \n")
-print(p.parse("   abc   \\ hi there\n"))
-p.parse("  \\ abc   ")
-p.parse("     \n")
-print(p.parse("  (STOP)  \\ \n"))
-
-p.first_pass = False
-print(p.parse("@i"))
-print(p.parse("@sum"))
-
-
-
-print(f'st={symbol_table}')
-
-    
-filename_in = sys.argv[1]  
-filename_out = os.path.splitext(filename_in)[0] + ".hack"   
-
-
-
-
-lines = []
-
-with open(filename_in, 'r') as f_in:
-
-    # initialize the
-
-    with open(filename_out, 'w') as f_out:
+    with open(filename_in, 'r') as f_in:
         for line in f_in:
-            line = line.rstrip('\n')
-            lines.append(line)
-            print(line)
-            f_out.write(line + '\n')
+            p.parse(line)
 
-print(lines)
-
-
-
+    p.first_pass = False
+    with open(filename_in, 'r') as f_in:    
+        with open(filename_out, 'w') as f_out:
+            for line in f_in:
+                l = p.parse(line)
+                if l:
+                    f_out.write(c.code(l) + '\n')
 
